@@ -1,21 +1,37 @@
 import React, { useState, useRef } from 'react';
+import Output from './Output';
 
-const ChatInterface = () => {
+const ChatInterface = ({
+  messages,
+  setMessages,
+}: {
+  messages: { text: string, sender: 'user' | 'bot', image?: string }[];
+  setMessages: React.Dispatch<React.SetStateAction<{ text: string, sender: 'user' | 'bot', image?: string }[]>>;
+}) => {
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [fullscreenPreview, setFullscreenPreview] = useState(false);
-  const [gender, setGender] = useState<'male' | 'female' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim() || attachments.length > 0) {
-      console.log('Message sent:', message);
-      console.log('Attachments:', attachments);
-      console.log('Selected gender:', gender);
+      setMessages(prev => [
+        ...prev,
+        previewImage
+          ? { text: message, sender: 'user', image: previewImage }
+          : { text: message, sender: 'user' }
+      ]);
+      setTimeout(() => {
+        setMessages(prev => [
+          ...prev,
+          { text: "This is a bot response.", sender: 'bot' }
+        ]);
+      }, 500);
+
       setMessage('');
       setAttachments([]);
       setSelectedFileName(null);
@@ -29,29 +45,17 @@ const ChatInterface = () => {
     const files = e.target.files;
     if (files && files.length > 0) {
       const newFiles = Array.from(files);
-      setAttachments(newFiles); // Replace previous attachments instead of adding
-      
-      const file = newFiles[0]; // Get first file
+      setAttachments(newFiles);
+      const file = newFiles[0];
       setSelectedFileName(file.name);
-      
-      // Check if file is an image
       if (file.type.match(/image\/(jpeg|jpg|png|gif)/)) {
         const reader = new FileReader();
         reader.onload = (event) => {
           if (event.target && event.target.result) {
             setPreviewImage(event.target.result as string);
             setShowPreview(true);
-            console.log("Image loaded:", file.name);
-          } else {
-            console.error("Failed to load image");
           }
         };
-        reader.onerror = (error) => {
-          console.error("Error reading file:", error);
-          setPreviewImage(null);
-          setShowPreview(false);
-        };
-        // Read the file as a data URL
         reader.readAsDataURL(file);
       } else {
         setPreviewImage(null);
@@ -61,146 +65,57 @@ const ChatInterface = () => {
   };
 
   return (
-    <div className="w-full p-4">
-      {/* Fullscreen Preview Modal */}
-      {fullscreenPreview && previewImage && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4">
-          <div className="relative w-full max-w-4xl">
-            <img 
-              src={previewImage} 
-              alt="Fullscreen preview" 
-              className="w-full h-auto object-contain max-h-[80vh]"
-            />
-            <button 
-              type="button"
-              onClick={() => setFullscreenPreview(false)}
-              className="absolute top-4 right-4 bg-black bg-opacity-50 rounded-full p-2 text-white hover:bg-opacity-70 cursor-pointer"
-              aria-label="Close fullscreen preview"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
-      
-      {/* Regular Preview Thumbnail */}
-      {showPreview && previewImage && !fullscreenPreview && (
-        <div className="relative max-w-xs mx-auto mb-4">
-          <div className="relative rounded-lg overflow-hidden border border-[#303030] cursor-pointer">
-            <img 
-              src={previewImage} 
-              alt="Attachment preview" 
-              className="w-full h-auto object-contain cursor-pointer"
-              style={{ maxHeight: "200px", maxWidth: "100%" }}
-              onClick={() => setFullscreenPreview(true)}
-            />
-            <button 
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent triggering the image click
-                setShowPreview(false);
-                // Keep the file but hide the preview
-              }}
-              className="absolute top-2 right-2 bg-black bg-opacity-50 rounded-full p-1 text-white hover:bg-opacity-70 cursor-pointer"
-              aria-label="Close preview"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Gender Selection */}
-      <div className="flex justify-center items-center mb-4">
-        <div className="text-white mr-3">Select Gender:</div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setGender('male')}
-            className={`px-4 py-2 rounded-full cursor-pointer focus:outline-none transition-colors ${
-              gender === 'male' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-[#1b1b1b] text-white border border-[#303030]'
-            }`}
-          >
-            Male
-          </button>
-          <button
-            type="button"
-            onClick={() => setGender('female')}
-            className={`px-4 py-2 rounded-full cursor-pointer focus:outline-none transition-colors ${
-              gender === 'female' 
-                ? 'bg-pink-600 text-white' 
-                : 'bg-[#1b1b1b] text-white border border-[#303030]'
-            }`}
-          >
-            Female
-          </button>
-        </div>
-      </div>
-
-      <form 
-        onSubmit={handleSubmit}
-        className="flex items-center gap-2 max-w-3xl mx-auto bg-[#1b1b1b] rounded-full px-4 py-3 border border-[#303030] shadow-lg"
-      >
-        {/* Hidden file input */}
-        <input 
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileUpload}
-          className="hidden"
-          accept="image/png,image/jpeg,image/jpg,application/pdf"
-        />
-        
-        {/* Attachment button */}
-        <button 
-          type="button" 
-          className="text-gray-400 hover:text-white focus:outline-none cursor-pointer"
-          aria-label="Attach file"
-          onClick={() => fileInputRef.current?.click()}
+    <div className="w-full flex flex-col">
+      <Output messages={messages} />
+      <div className="fixed bottom-0 left-0 w-full z-10">
+        <form
+          onSubmit={handleSubmit}
+          className="flex items-center gap-2 max-w-4xl mx-auto px-6 py-3 border border-gray-800 rounded-xl bg-[#232323] shadow-lg mb-10"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-            <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94a3 3 0 1 1 4.242 4.242l-10.94 10.94a1.5 1.5 0 0 1-2.121-2.121l7.693-7.693" />
+          
+          <button
+            type="button"
+            className="text-gray-400 hover:text-white focus:outline-none cursor-pointer mr-2"
+            aria-label="Attach file"
+            onClick={() => fileInputRef.current?.click()}
+            style={{ display: 'inline-flex', alignItems: 'center' }}
+          >
+            <svg width="22" height="22" viewBox="210 150 20 35" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <g>
+              <path d="M226,155 L226,175 C226,178.313 223.313,181 220,181 C216.687,181 214,178.313 214,175 L214,157 C214,154.791 215.791,153 218,153 C220.209,153 222,154.791 222,157 L222,175 C222,176.104 221.104,177 220,177 C218.896,177 218,176.104 218,175 L218,159 L216,159 L216,175 C216,177.209 217.791,179 220,179 C222.209,179 224,177.209 224,175 L224,157 C224,153.687 221.313,151 218,151 C214.687,151 212,153.687 212,157 L212,176 C212.493,179.945 215.921,183 220,183 C224.079,183 227.507,179.945 228,176 L228,155 L226,155"/>
+            </g>
           </svg>
-        </button>
+          </button>
 
-        {/* Text input - always showing default placeholder */}
-        <div className="flex-1 relative">
-          <input 
-            type="text" 
-            placeholder="Enter something about sketch..."
-            className="w-full bg-transparent font-light border-none text-white focus:outline-none py-2"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            onChange={handleFileUpload}
           />
-          {selectedFileName && (
-            <div className="absolute top-0 right-2 text-sm text-green-400 py-2">
-              <span className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M18.2 12.74a1 1 0 0 0 0-1.48l-7-5A1 1 0 0 0 9 7v10a1 1 0 0 0 1.6.8l7-5Z" />
-                </svg>
-                File attached
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Send button */}
-        <button 
-          type="submit" 
-          className="text-gray-400 hover:text-white focus:outline-none disabled:opacity-50 cursor-pointer"
-          disabled={!message.trim() && attachments.length === 0}
-          aria-label="Send message"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-          </svg>
-        </button>
-      </form>
+          
+          <input
+            type="text"
+            className="flex-1 bg-transparent text-white px-0 py-2 focus:outline-none"
+            placeholder="Type your message..."
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            style={{ minWidth: 0 }} 
+          />
+          <button
+            type="submit"
+            className="text-gray-400 hover:text-white focus:outline-none disabled:opacity-50 cursor-pointer ml-2 z-30"
+            disabled={!message.trim() && attachments.length === 0}
+            aria-label="Send message"
+            style={{ display: 'inline-flex', alignItems: 'center' }}
+          >
+            <svg width="22" height="22" viewBox="0 0 53 53" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21.6667 31.3333L51 2M21.6667 31.3333L31 50C31.117 50.2553 31.3048 50.4717 31.5412 50.6233C31.7776 50.775 32.0525 50.8557 32.3333 50.8557C32.6142 50.8557 32.8891 50.775 33.1255 50.6233C33.3618 50.4717 33.5497 50.2553 33.6667 50L51 2M21.6667 31.3333L3 22C2.74469 21.883 2.52834 21.6952 2.37666 21.4588C2.22498 21.2224 2.14435 20.9475 2.14435 20.6667C2.14435 20.3858 2.22498 20.1109 2.37666 19.8745C2.52834 19.6382 2.74469 19.4503 3 19.3333L51 2" 
+                stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </form>
+      </div>
     </div>
   );
 };
